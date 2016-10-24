@@ -5,7 +5,7 @@
 |_| |_|_|___/_|\_\__,_|_|   
                             
 Niebiańskie Słoje do symulacji każdej alternatywnej wersji Wszechświata
-Skrypt do prostego repozytorium
+Skrypt do prostego repozytorium w PERLu
 
 Wymagania:
 - Operowanie na plikach i katalogach
@@ -13,3 +13,31 @@ Wymagania:
 - Przywracanie archiwalnych kopii
 - Szczegóły jak data i rozmiar dla każdej wersji każdego pliku
 - Usuwanie historii
+
+Prawdopodobne użycia komendy. Nazwy specjalnie nie są klonem tych z GITa i innych, aby się nie myliły:
+$ niskar watch <pliki/katalogi>
+	Dodaj plik do obserwacji
+	
+$ niskar watch
+	Dodaj wszystko do obserwacji
+	
+$ niskar unwatch <pliki/katalogi>
+	Przestań obserwować plik
+	
+$ niskar shot <tekst do commita>
+	Zrób zdjęcie (commit) obserwowanych plików
+	
+$ niskar history
+	Wyświetl historię
+	
+$ niskar summon <id> <pliki/katalogi>
+	Przywołaj plik z historii i zastąp nim obecny
+	
+$ niskar teleport <id>
+	Zastępuje wszystkie pliki zdjęciem z historii
+	
+$ niskar burn <id>
+	Usuwa zdjęcie
+	
+$ niskar info <id> <plik/katalog>
+	Informacja o obserwowanym pliku

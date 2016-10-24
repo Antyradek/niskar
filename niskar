@@ -1,0 +1,4 @@
+#!/bin/perl -W
+# opcja W wypisuje błędy
+
+print "Witaj perło!\n";
