@@ -41,3 +41,6 @@ $ niskar burn <id>
 	
 $ niskar info <id> <plik/katalog>
 	Informacja o obserwowanym pliku
+	
+$ niskar help
+	Krótki opis komend

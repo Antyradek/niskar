@@ -1,4 +1,17 @@
-#!/bin/perl -W
-# opcja W wypisuje błędy
+#!/usr/bin/perl
+use strict;     #wymagaj inicjalizacji zmiennej przed użyciem
+use warnings;   #wypisuj informacje
 
-print "Witaj perło!\n";
+#wypisz pomoc
+sub printHelp
+{
+	print("Oto pomoc nadchodzi!\n");
+}
+
+my $argsCount = @ARGV;
+if($argsCount == 0)
+{
+    printHelp();
+    exit -1;
+}
+print "Jest $argsCount argumentów z $0\n";
