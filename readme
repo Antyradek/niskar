@@ -24,6 +24,9 @@ $ niskar watch <pliki/katalogi>
 $ niskar watch
 	Dodaj wszystko do obserwacji
 	
+$ niskar watched
+	Wypisuje obserwowane pliki.
+	
 $ niskar unwatch <pliki/katalogi>
 	Przestań obserwować plik
 	

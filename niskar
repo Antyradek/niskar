@@ -22,7 +22,8 @@ sub printError
 sub printHelp
 {
 	printInfo("niskar - użycie");
-	printInfo("start\n\tTworzy nowe repozytorium");
+	printInfo("start\n\tTworzy nowe repozytorium.");
+	printInfo("watched\n\tWypisuje obserwowane pliki.");
 }
 
 #stwórz repozytorium
@@ -48,6 +49,22 @@ sub commandStart
 
 }
 
+#wypisz obserwowane pliki
+sub commandWatched
+{
+	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	{
+		printError("Nie można otworzyć $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	while(<WATCHLIST_FILEHANDLE>)
+	{
+		chomp($_);
+		printInfo("$_");
+	}
+	close(WATCHLIST_FILEHANDLE);
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -60,6 +77,10 @@ my $command = $ARGV[0];
 if($command eq "start")
 {
 	commandStart();
+}
+elsif($command eq "watched")
+{
+	commandWatched();
 }
 else
 {
