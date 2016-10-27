@@ -1,10 +1,11 @@
 #!/usr/bin/perl
 use strict;     #wymagaj inicjalizacji zmiennej przed użyciem
 use warnings;   #wypisuj informacje
+use Cwd;
 
 my $niskarDirName = ".niskar/";
 my $watchlistFileName = $niskarDirName . "watchlist";
-my %errors = (fileErr => -2, commandErr => -1);
+my %errors = (fileErr => -2, commandErr => -1, argError => -3);
 
 #wypisz tekst
 sub printInfo
@@ -24,6 +25,7 @@ sub printHelp
 	printInfo("niskar - użycie");
 	printInfo("start\n\tTworzy nowe repozytorium.");
 	printInfo("watched\n\tWypisuje obserwowane pliki.");
+	printInfo("watch <pliki/katalogi>\n\tDodaje podane obiekty do obserwowanych.");
 }
 
 #stwórz repozytorium
@@ -46,7 +48,6 @@ sub commandStart
 	}
 	close(WATCHLIST_FILEHANDLE);
 	printInfo("Stworzono nowe repozytorium.");
-
 }
 
 #wypisz obserwowane pliki
@@ -65,6 +66,89 @@ sub commandWatched
 	close(WATCHLIST_FILEHANDLE);
 }
 
+#dodaj nowy plik do obserwowanych
+sub commandWatch
+{
+	#wczytaj pliki z argumentów
+	my $argsCount = @ARGV;
+	my @filesToWatch;
+	for(my $i = 1; $i < $argsCount; $i++)
+	{
+		$filesToWatch[$i - 1] = $ARGV[$i];
+	}
+	my $filesCount = @filesToWatch;
+
+	#wczytaj już obserwowane z pliku
+	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	{
+		printError("Nie można otworzyć $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	my @watchedFiles;
+	my $f = 0;
+	while(<WATCHLIST_FILEHANDLE>)
+	{
+		chomp($_);
+		$watchedFiles[$f] = $_;
+		$f++;
+	}
+	my $watchedFilesCount = @watchedFiles;
+	close(WATCHLIST_FILEHANDLE);
+
+	#dodaj do obserwowanych patrząc na istnienie, bycie w katalogu i duplikaty
+	my $currDir = cwd();
+	my $k = 0; #ilość dodanych plików
+	for(my $i = 0; $i < $filesCount; $i++)
+	{
+		my $fileIsGood = 1;
+		for(my $j = 0; $j < $watchedFilesCount; $j++)
+		{
+			if($filesToWatch[$i] eq $watchedFiles[$j])
+			{
+				$fileIsGood = 0;
+				last; #break;
+			}
+		}
+		if($fileIsGood eq 1)
+		{
+			if(-e $filesToWatch[$i])
+			{
+				if(-e $currDir . "/" . $filesToWatch[$i] and index($currDir . "/" . $filesToWatch[$i], "/../") eq -1)
+				{
+					$watchedFiles[$k + $watchedFilesCount] = $filesToWatch[$i];
+					$k++;
+				}
+				else
+				{
+					printError("Plik $filesToWatch[$i] jest poza obecnym katalogiem!");
+					exit $errors{argError};
+				}
+			}
+			else
+			{
+				printError("Plik $filesToWatch[$i] nie istnieje!");
+				exit $errors{argError};
+			}
+		}
+	}
+
+	#wypisz nową listę do pliku
+	if(!open(WATCHLIST_FILEHANDLE, ">", $watchlistFileName))
+	{
+		printError("Nie można zapisać do $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	printInfo("Obserwowane pliki:");
+	my $completeListCount = @watchedFiles;
+	for(my $i = 0; $i < $completeListCount; $i++)
+	{
+		printInfo("$watchedFiles[$i]");
+		print WATCHLIST_FILEHANDLE "$watchedFiles[$i]\n";
+	}
+	close(WATCHLIST_FILEHANDLE);
+
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -74,13 +158,17 @@ if($argsCount == 0)
 
 #nie ma oficjalnego switch, a given rzuca ostrzeżenia
 my $command = $ARGV[0];
-if($command eq "start")
+if($command eq "start" and $argsCount eq 1)
 {
 	commandStart();
 }
-elsif($command eq "watched")
+elsif($command eq "watched" and $argsCount eq 1)
 {
 	commandWatched();
+}
+elsif($command eq "watch")
+{
+	commandWatch();
 }
 else
 {

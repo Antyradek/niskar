@@ -21,9 +21,6 @@ $ niskar start
 $ niskar watch <pliki/katalogi>
 	Dodaj plik, lub katalog do obserwacji. Katalogi są traktowane osobno, nierekursywnie, daje to dodatkową fukcjonalność.
 	
-$ niskar watch
-	Dodaj wszystko do obserwacji
-	
 $ niskar watched
 	Wypisuje obserwowane pliki.
 	
