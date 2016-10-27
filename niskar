@@ -26,6 +26,7 @@ sub printHelp
 	printInfo("start\n\tTworzy nowe repozytorium.");
 	printInfo("watched\n\tWypisuje obserwowane pliki.");
 	printInfo("watch <pliki/katalogi>\n\tDodaje podane obiekty do obserwowanych.");
+	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
 }
 
 #stwórz repozytorium
@@ -47,7 +48,6 @@ sub commandStart
 		exit $errors{fileErr};
 	}
 	close(WATCHLIST_FILEHANDLE);
-	printInfo("Stworzono nowe repozytorium.");
 }
 
 #wypisz obserwowane pliki
@@ -138,15 +138,75 @@ sub commandWatch
 		printError("Nie można zapisać do $watchlistFileName.");
 		exit $errors{fileErr};
 	}
-	printInfo("Obserwowane pliki:");
 	my $completeListCount = @watchedFiles;
 	for(my $i = 0; $i < $completeListCount; $i++)
 	{
-		printInfo("$watchedFiles[$i]");
 		print WATCHLIST_FILEHANDLE "$watchedFiles[$i]\n";
 	}
 	close(WATCHLIST_FILEHANDLE);
+}
 
+#usuń obserwowaną wartość z pliku
+sub commandUnwatch()
+{
+	#wczytaj pliki z argumentów
+	my $argsCount = @ARGV;
+	my @filesToUnwatch;
+	for(my $i = 1; $i < $argsCount; $i++)
+	{
+		$filesToUnwatch[$i - 1] = $ARGV[$i];
+	}
+	my $filesCount = @filesToUnwatch;
+
+	#wczytaj już obserwowane z pliku
+	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	{
+		printError("Nie można otworzyć $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	my @watchedFiles;
+	my $f = 0;
+	while(<WATCHLIST_FILEHANDLE>)
+	{
+		chomp($_);
+		$watchedFiles[$f] = $_;
+		$f++;
+	}
+	my $watchedFilesCount = @watchedFiles;
+	close(WATCHLIST_FILEHANDLE);
+
+	#przepisuj do nowego pomijając pliki do usunięcia
+	my @newList;
+	my $k = 0;
+	for(my $i = 0; $i < $watchedFilesCount; $i++)
+	{
+		my $toBeDeleted = 0;
+		for(my $j = 0; $j < $filesCount; $j++)
+		{
+			if($watchedFiles[$i] eq $filesToUnwatch[$j])
+			{
+				$toBeDeleted = 1;
+			}
+		}
+		if($toBeDeleted eq 0)
+		{
+			$newList[$k] = $watchedFiles[$i];
+			$k++;
+		}
+	}
+
+	#wypisz nową listę do pliku
+	if(!open(WATCHLIST_FILEHANDLE, ">", $watchlistFileName))
+	{
+		printError("Nie można zapisać do $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	my $completeListCount = @newList;
+	for(my $i = 0; $i < $completeListCount; $i++)
+	{
+		print WATCHLIST_FILEHANDLE "$newList[$i]\n";
+	}
+	close(WATCHLIST_FILEHANDLE);
 }
 
 my $argsCount = @ARGV;
@@ -169,6 +229,10 @@ elsif($command eq "watched" and $argsCount eq 1)
 elsif($command eq "watch")
 {
 	commandWatch();
+}
+elsif($command eq "unwatch")
+{
+	commandUnwatch();
 }
 else
 {
