@@ -2,16 +2,67 @@
 use strict;     #wymagaj inicjalizacji zmiennej przed użyciem
 use warnings;   #wypisuj informacje
 
+my $niskarDirName = ".niskar/";
+my $watchlistFileName = $niskarDirName . "watchlist";
+my %errors = (fileErr => -2, commandErr => -1);
+
+#wypisz tekst
+sub printInfo
+{
+	print("$_[0]\n");
+}
+
+#wypisz błąd na czewono
+sub printError
+{
+	print(STDERR "\033[31m$_[0]\033[39m\n");
+}
+
 #wypisz pomoc
 sub printHelp
 {
-	print("Oto pomoc nadchodzi!\n");
+	printInfo("niskar - użycie");
+	printInfo("start\n\tTworzy nowe repozytorium");
+}
+
+#stwórz repozytorium
+sub commandStart
+{
+	if(-d $niskarDirName)
+	{
+		printError("Katalog $niskarDirName już istnieje!");
+		exit $errors{fileErr};
+	}
+	if(!mkdir($niskarDirName))
+	{
+		printError("Nie można stworzyć katalogu $niskarDirName.");
+		exit $errors{fileErr};
+	}
+	if(!open(WATCHLIST_FILEHANDLE, ">", $watchlistFileName))
+	{
+		printError("Nie można stworzyć pliku $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	close(WATCHLIST_FILEHANDLE);
+	printInfo("Stworzono nowe repozytorium.");
+
 }
 
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
     printHelp();
-    exit -1;
+    exit $errors{commandErr};
 }
-print "Jest $argsCount argumentów z $0\n";
+
+#nie ma oficjalnego switch, a given rzuca ostrzeżenia
+my $command = $ARGV[0];
+if($command eq "start")
+{
+	commandStart();
+}
+else
+{
+	printHelp();
+	exit $errors{commandErr};
+}

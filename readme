@@ -15,8 +15,11 @@ Wymagania:
 - Usuwanie historii
 
 Prawdopodobne użycia komendy. Nazwy specjalnie nie są klonem tych z GITa i innych, aby się nie myliły:
+$ niskar start
+	Tworzy nowe repozytorium w miejscu wywołania
+
 $ niskar watch <pliki/katalogi>
-	Dodaj plik do obserwacji
+	Dodaj plik, lub katalog do obserwacji. Katalogi są traktowane osobno, nierekursywnie, daje to dodatkową fukcjonalność.
 	
 $ niskar watch
 	Dodaj wszystko do obserwacji
@@ -44,3 +47,10 @@ $ niskar info <id> <plik/katalog>
 	
 $ niskar help
 	Krótki opis komend
+	
+Pliki:
+.niskar/
+	Katalog z danymi do repozytorium
+	
+.niskar/watchlist
+	Lista obserwowanych plików i katalogów
