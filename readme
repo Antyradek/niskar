@@ -54,3 +54,9 @@ Pliki:
 	
 .niskar/watchlist
 	Lista obserwowanych plików i katalogów
+	
+.niskar/lastid
+	Identyfikator ostatniego commita
+	
+.niskar/shots
+	Katalog zdjęć

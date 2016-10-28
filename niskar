@@ -2,10 +2,14 @@
 use strict;     #wymagaj inicjalizacji zmiennej przed użyciem
 use warnings;   #wypisuj informacje
 use Cwd;
+use File::Copy;
+use File::Path;
 
 my $niskarDirName = ".niskar/";
 my $watchlistFileName = $niskarDirName . "watchlist";
-my %errors = (fileErr => -2, commandErr => -1, argError => -3);
+my $lastIdFileName = $niskarDirName . "lastid";
+my $shotsDirName = $niskarDirName . "shots/";
+my %errors = (fileErr => -2, commandErr => -1, argError => -3, copyErr => -4);
 
 #wypisz tekst
 sub printInfo
@@ -27,6 +31,7 @@ sub printHelp
 	printInfo("watched\n\tWypisuje obserwowane pliki.");
 	printInfo("watch <pliki/katalogi>\n\tDodaje podane obiekty do obserwowanych.");
 	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
+	printInfo("shot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
 }
 
 #stwórz repozytorium
@@ -48,6 +53,19 @@ sub commandStart
 		exit $errors{fileErr};
 	}
 	close(WATCHLIST_FILEHANDLE);
+	if(!open(LASTID_FILEHANDLE, ">", $lastIdFileName))
+	{
+		printError("Nie można stworzyć pliku $lastIdFileName.");
+		exit $errors{fileErr};
+	}
+	print LASTID_FILEHANDLE "0";
+	close(LASTID_FILEHANDLE);
+	if(!mkdir($shotsDirName))
+	{
+		printError("Nie można stworzyć katalogu $shotsDirName.");
+		exit $errors{fileErr};
+	}
+
 }
 
 #wypisz obserwowane pliki
@@ -209,6 +227,89 @@ sub commandUnwatch()
 	close(WATCHLIST_FILEHANDLE);
 }
 
+#zrób zdjęcie (commit)
+sub commandShot()
+{
+	#otwórz plik z ostatnim id
+	if(!open(LASTID_FILEHANDLE, "<", $lastIdFileName))
+	{
+		printError("Nie można otworzyć $lastIdFileName.");
+		exit $errors{fileErr};
+	}
+	my $lastId;
+	while(<LASTID_FILEHANDLE>)
+	{
+		chomp($_);
+		$lastId = $_;
+	}
+	$lastId++;
+	close(LASTID_FILEHANDLE);
+
+	#stwórz katalog
+	my $dirName = $shotsDirName . "shot" . $lastId . "/";
+	if(!mkdir($dirName))
+	{
+		printError("Nie można stworzyć katalogu zdjęcia $dirName.");
+		exit $errors{fileErr};
+	}
+
+	#weź tekst commita
+	my $commitText = join(" ", @ARGV);
+	#$commitText = chomp($commitText);
+	$commitText = substr($commitText, 5); #długość "shot"
+
+	#zapisz commit
+	if(!open(COMMIT_FILEHANDLE, ">", $dirName . ".info"))
+	{
+		printError("Nie można zapisać tekstu zdjęcia.");
+		exit $errors{fileErr};
+	}
+	print COMMIT_FILEHANDLE $commitText;
+	close(COMMIT_FILEHANDLE);
+
+	#wczytaj obserwowane pliki
+	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	{
+		printError("Nie można otworzyć $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	my @watchedFiles;
+	my $f = 0;
+	while(<WATCHLIST_FILEHANDLE>)
+	{
+		chomp($_);
+		$watchedFiles[$f] = $_;
+		$f++;
+	}
+	my $watchedFilesCount = @watchedFiles;
+	close(WATCHLIST_FILEHANDLE);
+
+	#kopiuj pliki
+	foreach my $x (@watchedFiles)
+	{
+		my $newDirName = $dirName . $x;
+		#perl nie obsługuje natywnie rekursywnego kopiowania katalogów. Tak jest szybciej,
+		system("cp -r $x $newDirName");
+		if($? ne 0)
+		{
+			printError("Nie można skopiować $x do $newDirName!");
+			#usuwamy katalog, ponieważ i tak jest niepełny
+			rmtree($dirName);
+			exit $errors{copyErr};
+		}
+	}
+
+	#zapisz nowy id
+	if(!open(LASTID_FILEHANDLE, ">", $lastIdFileName))
+	{
+		printError("Nie można zaktualizować numeru id");
+		exit $errors{fileErr};
+	}
+	print LASTID_FILEHANDLE $lastId;
+	close(LASTID_FILEHANDLE);
+
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -233,6 +334,10 @@ elsif($command eq "watch")
 elsif($command eq "unwatch")
 {
 	commandUnwatch();
+}
+elsif($command eq "shot")
+{
+	commandShot();
 }
 else
 {
