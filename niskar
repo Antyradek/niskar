@@ -32,6 +32,7 @@ sub printHelp
 	printInfo("watch <pliki/katalogi>\n\tDodaje podane obiekty do obserwowanych.");
 	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
 	printInfo("shot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
+	printInfo("history\n\tWypisuje listę zdjęć z komentarzami i datami.");
 }
 
 #stwórz repozytorium
@@ -246,7 +247,7 @@ sub commandShot()
 	close(LASTID_FILEHANDLE);
 
 	#stwórz katalog
-	my $dirName = $shotsDirName . "shot" . $lastId . "/";
+	my $dirName = sprintf ("$shotsDirName" . "shot%04d/", $lastId);
 	if(!mkdir($dirName))
 	{
 		printError("Nie można stworzyć katalogu zdjęcia $dirName.");
@@ -258,13 +259,16 @@ sub commandShot()
 	#$commitText = chomp($commitText);
 	$commitText = substr($commitText, 5); #długość "shot"
 
-	#zapisz commit
+	#zapisz commit i czas
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
+	my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
 	if(!open(COMMIT_FILEHANDLE, ">", $dirName . ".info"))
 	{
 		printError("Nie można zapisać tekstu zdjęcia.");
 		exit $errors{fileErr};
 	}
-	print COMMIT_FILEHANDLE $commitText;
+	print COMMIT_FILEHANDLE "$commitText\n";
+	print COMMIT_FILEHANDLE $timeString;
 	close(COMMIT_FILEHANDLE);
 
 	#wczytaj obserwowane pliki
@@ -318,7 +322,10 @@ sub commandHistory()
 		printError("Nie można wypisać zawartości $shotsDirName.");
 		exit $errors{fileErr};
 	}
-	while(my $subdir = readdir(SHOTS_DIR))
+	#wkładamy nazwy do tablicy, ale bez .. i .
+	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
+	@subdirs = sort @subdirs;
+	foreach my $subdir (@subdirs)
 	{
 		if($subdir ne ".." and $subdir ne ".")
 		{
@@ -358,19 +365,19 @@ elsif($command eq "watched" and $argsCount eq 1)
 {
 	commandWatched();
 }
-elsif($command eq "watch")
+elsif($command eq "watch" and $argsCount gt 1)
 {
 	commandWatch();
 }
-elsif($command eq "unwatch")
+elsif($command eq "unwatch" and $argsCount gt 1)
 {
 	commandUnwatch();
 }
-elsif($command eq "shot")
+elsif($command eq "shot" and $argsCount gt 1)
 {
 	commandShot();
 }
-elsif($command eq "history")
+elsif($command eq "history" and $argsCount eq 1)
 {
 	commandHistory();
 }
