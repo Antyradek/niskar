@@ -310,6 +310,37 @@ sub commandShot()
 
 }
 
+#wypisuje zdjęcia
+sub commandHistory()
+{
+	if(!opendir(SHOTS_DIR, $shotsDirName))
+	{
+		printError("Nie można wypisać zawartości $shotsDirName.");
+		exit $errors{fileErr};
+	}
+	while(my $subdir = readdir(SHOTS_DIR))
+	{
+		if($subdir ne ".." and $subdir ne ".")
+		{
+			printInfo("$subdir");
+			if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/.info"))
+			{
+				printError("Nie można uzyskać tekstu zdjęcia!");
+			}
+			else
+			{
+				while(<INFO_FILEHANDLE>)
+				{
+					chomp($_);
+					printInfo("\t" . $_);
+				}
+				close(INFO_FILEHANDLE);
+			}
+		}
+	}
+	closedir(SHOTS_DIR);
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -338,6 +369,10 @@ elsif($command eq "unwatch")
 elsif($command eq "shot")
 {
 	commandShot();
+}
+elsif($command eq "history")
+{
+	commandHistory();
 }
 else
 {
