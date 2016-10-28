@@ -157,10 +157,9 @@ sub commandWatch
 		printError("Nie można zapisać do $watchlistFileName.");
 		exit $errors{fileErr};
 	}
-	my $completeListCount = @watchedFiles;
-	for(my $i = 0; $i < $completeListCount; $i++)
+	foreach my $watchedFile (@watchedFiles)
 	{
-		print WATCHLIST_FILEHANDLE "$watchedFiles[$i]\n";
+		print WATCHLIST_FILEHANDLE "$watchedFile\n";
 	}
 	close(WATCHLIST_FILEHANDLE);
 }
@@ -220,10 +219,9 @@ sub commandUnwatch()
 		printError("Nie można zapisać do $watchlistFileName.");
 		exit $errors{fileErr};
 	}
-	my $completeListCount = @newList;
-	for(my $i = 0; $i < $completeListCount; $i++)
+	foreach my $file (@newList)
 	{
-		print WATCHLIST_FILEHANDLE "$newList[$i]\n";
+		print WATCHLIST_FILEHANDLE "$file\n";
 	}
 	close(WATCHLIST_FILEHANDLE);
 }
