@@ -33,6 +33,7 @@ sub printHelp
 	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
 	printInfo("shot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
 	printInfo("history\n\tWypisuje listę zdjęć z komentarzami i datami.");
+	printInfo("burn <zdjęcie>\n\tUsuwa zdjęcie z repozytorium.");
 }
 
 #stwórz repozytorium
@@ -66,7 +67,6 @@ sub commandStart
 		printError("Nie można stworzyć katalogu $shotsDirName.");
 		exit $errors{fileErr};
 	}
-
 }
 
 #wypisz obserwowane pliki
@@ -327,21 +327,66 @@ sub commandHistory()
 	@subdirs = sort @subdirs;
 	foreach my $subdir (@subdirs)
 	{
-		if($subdir ne ".." and $subdir ne ".")
+		printInfo("$subdir");
+		if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/.info"))
 		{
-			printInfo("$subdir");
-			if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/.info"))
+			printError("Nie można uzyskać tekstu zdjęcia!");
+		}
+		else
+		{
+			while(<INFO_FILEHANDLE>)
 			{
-				printError("Nie można uzyskać tekstu zdjęcia!");
+				chomp($_);
+				printInfo("\t" . $_);
 			}
-			else
+			close(INFO_FILEHANDLE);
+		}
+	}
+	closedir(SHOTS_DIR);
+}
+
+sub commandBurn
+{
+	#wczytaj pliki z argumentów
+	my $argsCount = @ARGV;
+	my @filesToBurn;
+	for(my $i = 1; $i < $argsCount; $i++)
+	{
+		$filesToBurn[$i - 1] = $ARGV[$i];
+	}
+	my $filesCount = @filesToBurn;
+
+	#wczytaj listę commitów
+	if(!opendir(SHOTS_DIR, $shotsDirName))
+	{
+		printError("Nie można wypisać zawartości $shotsDirName.");
+		exit $errors{fileErr};
+	}
+	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
+
+	#sprawdź poprawność
+	my $corr = 1;
+	foreach my $fileToBurn (@filesToBurn)
+	{
+		if(!-e $shotsDirName . $fileToBurn)
+		{
+			printError("Zdjęcie $fileToBurn nie istnieje!");
+			$corr = 0;
+		}
+	}
+	if($corr == 0)
+	{
+		exit $errors{argError};
+	}
+
+	#usuń podane
+	foreach my $subdir (@subdirs)
+	{
+		foreach my $fileToBurn (@filesToBurn)
+		{
+			if($subdir eq $fileToBurn)
 			{
-				while(<INFO_FILEHANDLE>)
-				{
-					chomp($_);
-					printInfo("\t" . $_);
-				}
-				close(INFO_FILEHANDLE);
+				rmtree($shotsDirName . $subdir);
 			}
 		}
 	}
@@ -380,6 +425,10 @@ elsif($command eq "shot" and $argsCount gt 1)
 elsif($command eq "history" and $argsCount eq 1)
 {
 	commandHistory();
+}
+elsif($command eq "burn" and $argsCount gt 1)
+{
+	commandBurn();
 }
 else
 {
