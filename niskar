@@ -9,6 +9,7 @@ my $niskarDirName = ".niskar/";
 my $watchlistFileName = $niskarDirName . "watchlist";
 my $lastIdFileName = $niskarDirName . "lastid";
 my $shotsDirName = $niskarDirName . "shots/";
+my $infoFileName = ".info";
 my %errors = (fileErr => -2, commandErr => -1, argError => -3, copyErr => -4);
 
 #wypisz tekst
@@ -33,7 +34,8 @@ sub printHelp
 	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
 	printInfo("shot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
 	printInfo("history\n\tWypisuje listę zdjęć z komentarzami i datami.");
-	printInfo("burn <zdjęcie>\n\tUsuwa zdjęcie z repozytorium.");
+	printInfo("burn <zdjęcia>\n\tUsuwa zdjęcia z repozytorium.");
+	printInfo("summon <zdjęcie> <pliki/katalogi>\n\tZastępuje obecne pliki podanymi plikami ze zdjęcia.");
 }
 
 #stwórz repozytorium
@@ -260,7 +262,7 @@ sub commandShot()
 	#zapisz commit i czas
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
-	if(!open(COMMIT_FILEHANDLE, ">", $dirName . ".info"))
+	if(!open(COMMIT_FILEHANDLE, ">", $dirName . $infoFileName))
 	{
 		printError("Nie można zapisać tekstu zdjęcia.");
 		exit $errors{fileErr};
@@ -326,7 +328,7 @@ sub commandHistory()
 	foreach my $subdir (@subdirs)
 	{
 		printInfo("$subdir");
-		if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/.info"))
+		if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/" . $infoFileName))
 		{
 			printError("Nie można uzyskać tekstu zdjęcia!");
 		}
@@ -352,7 +354,6 @@ sub commandBurn
 	{
 		$filesToBurn[$i - 1] = $ARGV[$i];
 	}
-	my $filesCount = @filesToBurn;
 
 	#wczytaj listę commitów
 	if(!opendir(SHOTS_DIR, $shotsDirName))
@@ -391,6 +392,49 @@ sub commandBurn
 	closedir(SHOTS_DIR);
 }
 
+sub commandSummon
+{
+	#wczytaj pliki z argumentów
+	my $argsCount = @ARGV;
+	my @filesToSummon;
+	for(my $i = 2; $i < $argsCount; $i++)
+	{
+		$filesToSummon[$i - 2] = $ARGV[$i];
+	}
+	my $shotToSummon = $ARGV[1];
+
+	#sprawdź, czy katalog istnieje
+	if(!-d $shotsDirName . $shotToSummon)
+	{
+		printError("Zdjęcie $shotToSummon nie istnieje!");
+		exit $errors{argError};
+	}
+	my $shotDir = $shotsDirName . $shotToSummon . "/";
+
+	#sprawdź czy pliki istnieją w zdjęciach
+	foreach my $fileToSummon (@filesToSummon)
+	{
+		if($fileToSummon eq $infoFileName or !(-f $shotDir . $fileToSummon or -d $shotDir . $fileToSummon))
+		{
+			printError("Obiekt $fileToSummon nie istnieje!");
+			exit $errors{argError};
+		}
+	}
+
+	#skopiuj plik
+	foreach my $fileToSummon (@filesToSummon)
+	{
+		my $fileToCopy = $shotDir . $fileToSummon;
+		#opcja T traktuje docelowy katalog jak plik i nie tworzy drugiego o tej samej nazwie wewnątrz
+		system("cp -rT $fileToCopy $fileToSummon");
+		if($? ne 0)
+		{
+			printError("Nie można przywołać $fileToSummon!");
+			exit $errors{copyErr};
+		}
+	}
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -427,6 +471,10 @@ elsif($command eq "history" and $argsCount eq 1)
 elsif($command eq "burn" and $argsCount gt 1)
 {
 	commandBurn();
+}
+elsif($command eq "summon" and $argsCount gt 2)
+{
+	commandSummon();
 }
 else
 {
