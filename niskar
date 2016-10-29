@@ -4,6 +4,7 @@ use warnings;   #wypisuj informacje
 use Cwd;
 use File::Copy;
 use File::Path;
+use File::stat;
 
 my $niskarDirName = ".niskar/";
 my $watchlistFileName = $niskarDirName . "watchlist";
@@ -37,6 +38,7 @@ sub printHelp
 	printInfo("burn <zdjęcia>\n\tUsuwa zdjęcia z repozytorium.");
 	printInfo("summon <zdjęcie> <pliki/katalogi>\n\tZastępuje obecne pliki podanymi plikami ze zdjęcia.");
 	printInfo("teleport <zdjęcie>\n\tZastępuje wszystkie pliki i katalogi ze zdjęcia.");
+	printInfo("info <zdjęcie> <plik/katalog>\n\tWypisuje informacje o danym obiekcie.");
 }
 
 #stwórz repozytorium
@@ -415,7 +417,7 @@ sub commandSummon
 	#sprawdź czy pliki istnieją w zdjęciach
 	foreach my $fileToSummon (@filesToSummon)
 	{
-		if($fileToSummon eq $infoFileName or !(-f $shotDir . $fileToSummon or -d $shotDir . $fileToSummon))
+		if($fileToSummon eq $infoFileName or !-e $shotDir . $fileToSummon)
 		{
 			printError("Obiekt $fileToSummon nie istnieje!");
 			exit $errors{argError};
@@ -468,6 +470,49 @@ sub commandTeleport()
 	closedir(SHOT_DIR);
 }
 
+sub commandInfo
+{
+	my $shot = $ARGV[1];
+	my $file = $ARGV[2];
+	my $shotDir = $shotsDirName . $shot . "/";
+
+	#sprawdź, czy zdjęcie istnieje
+	if(!-d $shotDir)
+	{
+		printError("Zdjęcie $shot nie istnieje.");
+		exit $errors{argError};
+	}
+
+	#sprawdź, czy plik istnieje
+	my $fileName = $shotDir . $file;
+	if(!-e $fileName or $file eq $infoFileName)
+	{
+		printError("Plik $file nie istnieje.");
+		exit $errors{argError};
+	}
+
+	#Wypisz plik
+	printInfo("$file");
+
+	if(-f $fileName)
+	{
+		printInfo("\tTyp:\t\tPlik");
+	}
+	else
+	{
+		printInfo("\tTyp:\t\tKatalog");
+	}
+
+	#oblicz wielkość pliku
+	my $fileSize = -s $fileName;
+	printInfo("\tRozmiar:\t$fileSize B");
+
+	#oblicz datę
+	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(stat($fileName) -> mtime);
+	my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
+	printInfo("\tModyfikacja:\t$timeString");
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -512,6 +557,10 @@ elsif($command eq "summon" and $argsCount gt 2)
 elsif($command eq "teleport" and $argsCount eq 2)
 {
 	commandTeleport();
+}
+elsif($command eq "info" and $argsCount eq 3)
+{
+	commandInfo();
 }
 else
 {
