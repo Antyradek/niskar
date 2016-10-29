@@ -36,6 +36,7 @@ sub printHelp
 	printInfo("history\n\tWypisuje listę zdjęć z komentarzami i datami.");
 	printInfo("burn <zdjęcia>\n\tUsuwa zdjęcia z repozytorium.");
 	printInfo("summon <zdjęcie> <pliki/katalogi>\n\tZastępuje obecne pliki podanymi plikami ze zdjęcia.");
+	printInfo("teleport <zdjęcie>\n\tZastępuje wszystkie pliki i katalogi ze zdjęcia.");
 }
 
 #stwórz repozytorium
@@ -435,6 +436,38 @@ sub commandSummon
 	}
 }
 
+sub commandTeleport()
+{
+	my $shot = $ARGV[1];
+	my $shotDir = $shotsDirName . $shot . "/";
+	#sprawdź czy zdjęcie istnieje
+	if(!-d $shotDir)
+	{
+		printError("Zdjęcie $shot nie istnieje!");
+		exit $errors{argError};
+	}
+
+	#stwórz tablicę wszystkich ważnych plików
+	if(!opendir(SHOT_DIR, $shotDir))
+	{
+		printError("Nie można otworzyć $shot.");
+		exit $errors{fileErr};
+	}
+	#wkładamy nazwy do tablicy, ale bez .. , . i .info
+	my @files = grep{$_ ne "." and $_ ne ".." and $_ ne $infoFileName} readdir(SHOT_DIR);
+	foreach my $file (@files)
+	{
+		my $source = $shotDir . $file;
+		system("cp -rT $source $file");
+		if($? ne 0)
+		{
+			printError("Nie można teleportować $file!");
+			exit $errors{copyErr};
+		}
+	}
+	closedir(SHOT_DIR);
+}
+
 my $argsCount = @ARGV;
 if($argsCount == 0)
 {
@@ -475,6 +508,10 @@ elsif($command eq "burn" and $argsCount gt 1)
 elsif($command eq "summon" and $argsCount gt 2)
 {
 	commandSummon();
+}
+elsif($command eq "teleport" and $argsCount eq 2)
+{
+	commandTeleport();
 }
 else
 {
