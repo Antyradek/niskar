@@ -45,6 +45,9 @@ $ niskar burn <id>
 $ niskar info <id> <plik/katalog>
 	Informacja o obserwowanym pliku
 	
+$ niskar versions <plik/katalog>
+	Lista wszystkich archiwizacji danego pliku.
+	
 $ niskar help
 	Krótki opis komend
 	

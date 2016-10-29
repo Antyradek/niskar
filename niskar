@@ -39,6 +39,7 @@ sub printHelp
 	printInfo("summon <zdjęcie> <pliki/katalogi>\n\tZastępuje obecne pliki podanymi plikami ze zdjęcia.");
 	printInfo("teleport <zdjęcie>\n\tZastępuje wszystkie pliki i katalogi ze zdjęcia.");
 	printInfo("info <zdjęcie> <plik/katalog>\n\tWypisuje informacje o danym obiekcie.");
+	printInfo("versions <plik/katalog>\n\tWypisuje listę archiwizacji obiektu.");
 }
 
 #stwórz repozytorium
@@ -334,6 +335,8 @@ sub commandHistory()
 	#wkładamy nazwy do tablicy, ale bez .. i .
 	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
 	@subdirs = sort @subdirs;
+	closedir(SHOTS_DIR);
+
 	foreach my $subdir (@subdirs)
 	{
 		printInfo("$subdir");
@@ -351,7 +354,7 @@ sub commandHistory()
 			close(INFO_FILEHANDLE);
 		}
 	}
-	closedir(SHOTS_DIR);
+
 }
 
 sub commandBurn
@@ -371,6 +374,7 @@ sub commandBurn
 		exit $errors{fileErr};
 	}
 	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
+	closedir(SHOTS_DIR);
 
 	#sprawdź poprawność
 	my $corr = 1;
@@ -399,7 +403,7 @@ sub commandBurn
 			}
 		}
 	}
-	closedir(SHOTS_DIR);
+
 }
 
 sub commandSummon
@@ -464,6 +468,8 @@ sub commandTeleport()
 	}
 	#wkładamy nazwy do tablicy, ale bez .. i .
 	my @files = grep{$_ ne "." and $_ ne ".."} readdir(SHOT_DIR);
+	closedir(SHOT_DIR);
+
 	foreach my $file (@files)
 	{
 		my $source = $shotDir . $file;
@@ -474,7 +480,7 @@ sub commandTeleport()
 			exit $errors{copyErr};
 		}
 	}
-	closedir(SHOT_DIR);
+
 }
 
 sub commandInfo
@@ -518,6 +524,39 @@ sub commandInfo
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(stat($fileName) -> mtime);
 	my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
 	printInfo("\tModyfikacja:\t$timeString");
+}
+
+sub commandVersions()
+{
+	my $file = $ARGV[1];
+
+	#znajdź listę commitów
+	if(!opendir(SHOTS_DIR, $shotsDirName))
+	{
+		printError("Nie można wypisać zawartości $shotsDirName.");
+		exit $errors{fileErr};
+	}
+	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
+	@subdirs = sort @subdirs;
+	closedir(SHOTS_DIR);
+
+	foreach my $subdir (@subdirs)
+	{
+		my $fileName = $shotsDirName . $subdir . "/" . $file;
+		if(-e $fileName)
+		{
+			printInfo("$subdir");
+
+			#oblicz wielkość pliku
+			my $fileSize = -s $fileName;
+			printInfo("\tRozmiar:\t$fileSize B");
+
+			#oblicz datę
+			my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(stat($fileName) -> mtime);
+			my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
+			printInfo("\tModyfikacja:\t$timeString");
+		}
+	}
 }
 
 my $argsCount = @ARGV;
@@ -568,6 +607,10 @@ elsif($command eq "teleport" and $argsCount eq 2)
 elsif($command eq "info" and $argsCount eq 3)
 {
 	commandInfo();
+}
+elsif($command eq "versions" and $argsCount eq 2)
+{
+	commandVersions();
 }
 else
 {
