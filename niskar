@@ -10,7 +10,7 @@ my $niskarDirName = ".niskar/";
 my $watchlistFileName = $niskarDirName . "watchlist";
 my $lastIdFileName = $niskarDirName . "lastid";
 my $shotsDirName = $niskarDirName . "shots/";
-my $infoFileName = ".info";
+my $infosDirName = $niskarDirName . "infos/";
 my %errors = (fileErr => -2, commandErr => -1, argError => -3, copyErr => -4);
 
 #wypisz tekst
@@ -70,6 +70,11 @@ sub commandStart
 	if(!mkdir($shotsDirName))
 	{
 		printError("Nie można stworzyć katalogu $shotsDirName.");
+		exit $errors{fileErr};
+	}
+	if(!mkdir($infosDirName))
+	{
+		printError("Nie można stworzyć katalogu $infosDirName.");
 		exit $errors{fileErr};
 	}
 }
@@ -249,27 +254,28 @@ sub commandShot()
 	$lastId++;
 	close(LASTID_FILEHANDLE);
 
-	#stwórz katalog
-	my $dirName = sprintf ("$shotsDirName" . "shot%04d/", $lastId);
+	#stwórz katalog i plik danych
+	my $objectName = sprintf ("shot%04d", $lastId);
+	my $dirName = $shotsDirName . $objectName . "/";
+	my $infoName = $infosDirName . $objectName;
 	if(!mkdir($dirName))
 	{
 		printError("Nie można stworzyć katalogu zdjęcia $dirName.");
 		exit $errors{fileErr};
 	}
+	if(!open(COMMIT_FILEHANDLE, ">", $infoName))
+	{
+		printError("Nie można utworzyć $infoName.");
+		exit $errors{fileErr};
+	}
 
 	#weź tekst commita
 	my $commitText = join(" ", @ARGV);
-	#$commitText = chomp($commitText);
 	$commitText = substr($commitText, 5); #długość "shot"
 
 	#zapisz commit i czas
 	my ($sec,$min,$hour,$mday,$mon,$year,$wday,$yday,$isdst) = localtime(time);
 	my $timeString = ($year + 1900) . "-" . ($mon + 1) . "-" . $mday . " " . $hour . ":" . $min . ":" . $sec;
-	if(!open(COMMIT_FILEHANDLE, ">", $dirName . $infoFileName))
-	{
-		printError("Nie można zapisać tekstu zdjęcia.");
-		exit $errors{fileErr};
-	}
 	print COMMIT_FILEHANDLE "$commitText\n";
 	print COMMIT_FILEHANDLE $timeString;
 	close(COMMIT_FILEHANDLE);
@@ -331,9 +337,9 @@ sub commandHistory()
 	foreach my $subdir (@subdirs)
 	{
 		printInfo("$subdir");
-		if(!open(INFO_FILEHANDLE, "<", $shotsDirName . $subdir . "/" . $infoFileName))
+		if(!open(INFO_FILEHANDLE, "<", $infosDirName . $subdir))
 		{
-			printError("Nie można uzyskać tekstu zdjęcia!");
+			printError("Nie można uzyskać informacji zdjęcia!");
 		}
 		else
 		{
@@ -389,6 +395,7 @@ sub commandBurn
 			if($subdir eq $fileToBurn)
 			{
 				rmtree($shotsDirName . $subdir);
+				unlink($infosDirName . $subdir);
 			}
 		}
 	}
@@ -417,7 +424,7 @@ sub commandSummon
 	#sprawdź czy pliki istnieją w zdjęciach
 	foreach my $fileToSummon (@filesToSummon)
 	{
-		if($fileToSummon eq $infoFileName or !-e $shotDir . $fileToSummon)
+		if(!-e $shotDir . $fileToSummon)
 		{
 			printError("Obiekt $fileToSummon nie istnieje!");
 			exit $errors{argError};
@@ -455,8 +462,8 @@ sub commandTeleport()
 		printError("Nie można otworzyć $shot.");
 		exit $errors{fileErr};
 	}
-	#wkładamy nazwy do tablicy, ale bez .. , . i .info
-	my @files = grep{$_ ne "." and $_ ne ".." and $_ ne $infoFileName} readdir(SHOT_DIR);
+	#wkładamy nazwy do tablicy, ale bez .. i .
+	my @files = grep{$_ ne "." and $_ ne ".."} readdir(SHOT_DIR);
 	foreach my $file (@files)
 	{
 		my $source = $shotDir . $file;
@@ -485,9 +492,9 @@ sub commandInfo
 
 	#sprawdź, czy plik istnieje
 	my $fileName = $shotDir . $file;
-	if(!-e $fileName or $file eq $infoFileName)
+	if(!-e $fileName)
 	{
-		printError("Plik $file nie istnieje.");
+		printError("Obiekt $file nie istnieje.");
 		exit $errors{argError};
 	}
 
