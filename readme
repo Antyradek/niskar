@@ -16,7 +16,7 @@ Wymagania:
 
 Prawdopodobne użycia komendy. Nazwy specjalnie nie są klonem tych z GITa i innych, aby się nie myliły:
 $ niskar start
-	Tworzy nowe repozytorium w miejscu wywołania
+	Tworzy nowe repozytorium w miejscu wywołania.
 
 $ niskar watch <pliki/katalogi>
 	Dodaj plik, lub katalog do obserwacji. Katalogi są traktowane osobno, nierekursywnie, daje to dodatkową fukcjonalność.
@@ -25,25 +25,25 @@ $ niskar watched
 	Wypisuje obserwowane pliki.
 	
 $ niskar unwatch <pliki/katalogi>
-	Przestań obserwować plik
+	Przestań obserwować obiekty.
 	
 $ niskar shot <tekst do commita>
-	Zrób zdjęcie (commit) obserwowanych plików
+	Zrób zdjęcie (commit) obserwowanych plików.
 	
 $ niskar history
-	Wyświetl historię
+	Wyświetl historię zdjęć.
 	
-$ niskar summon <id> <pliki/katalogi>
-	Przywołaj plik z historii i zastąp nim obecny
+$ niskar summon <zdjęcie> <pliki/katalogi>
+	Przywołaj pliki z historii i zastąp nimi obecne.
 	
-$ niskar teleport <id>
-	Zastępuje wszystkie pliki zdjęciem z historii
+$ niskar teleport <zdjęcie>
+	Zastępuje wszystkie pliki zdjęciem z historii.
 	
-$ niskar burn <id>
-	Usuwa zdjęcie
+$ niskar burn <zdjęcie>
+	Usuwa zdjęcie.
 	
-$ niskar info <id> <plik/katalog>
-	Informacja o obserwowanym pliku
+$ niskar info <zdjęcie> <plik/katalog>
+	Informacja o obserwowanym pliku.
 	
 $ niskar versions <plik/katalog>
 	Lista wszystkich archiwizacji danego pliku.

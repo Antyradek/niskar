@@ -42,6 +42,93 @@ sub printHelp
 	printInfo("versions <plik/katalog>\n\tWypisuje listę archiwizacji obiektu.");
 }
 
+#zwraca tablicę wierszy z watchlist
+sub readWatchlist
+{
+	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	{
+		printError("Nie można odczytać $watchlistFileName.");
+		exit $errors{fileErr};
+	}
+	my @watchedFiles;
+	my $f = 0;
+	while(<WATCHLIST_FILEHANDLE>)
+	{
+		chomp($_);
+		$watchedFiles[$f] = $_;
+		$f++;
+	}
+	close(WATCHLIST_FILEHANDLE);
+	return @watchedFiles;
+}
+
+#odczytuje argumenty od n
+sub readArgs
+{
+	my ($startArg) = @_;
+	my $argsCount = @ARGV;
+	my @args;
+	for(my $i = $startArg; $i < $argsCount; $i++)
+	{
+		$args[$i - $startArg] = $ARGV[$i];
+	}
+	return @args;
+}
+
+#zapisz tablicę do pliku
+sub saveToFile
+{
+	my $arrref = $_[0];
+	my $fileName = $_[1];
+	if(!open(FILEHANDLE, ">", $fileName))
+	{
+		printError("Nie można zapisać do $fileName.");
+		exit $errors{fileErr};
+	}
+	foreach my $file (@$arrref)
+	{
+		print FILEHANDLE "$file\n";
+	}
+	close(FILEHANDLE);
+}
+
+#zwróć tablicę zdjęć
+sub readShots
+{
+	if(!opendir(SHOTS_DIR, $shotsDirName))
+	{
+		printError("Nie można odczytać zawartości $shotsDirName.");
+		exit $errors{fileErr};
+	}
+	#wkładamy nazwy do tablicy, ale bez .. i .
+	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
+	@subdirs = sort @subdirs;
+	closedir(SHOTS_DIR);
+	return @subdirs;
+}
+
+#skopiuj pliki
+sub copyFiles
+{
+	my $arrref = $_[2];
+	my $dest = $_[1];
+	my $source = $_[0];
+	foreach my $x (@$arrref)
+	{
+		my $newFileName = $source . $x;
+		my $newDestName = $dest . $x;
+		#perl nie obsługuje natywnie rekursywnego kopiowania katalogów. Tak jest szybciej,
+		system("cp -rT $newFileName $newDestName");
+		if($? ne 0)
+		{
+			printError("Nie można skopiować $x do $dest!");
+			#usuwamy katalog, ponieważ i tak jest niepełny
+			return 0;
+		}
+	}
+	return 1;
+}
+
 #stwórz repozytorium
 sub commandStart
 {
@@ -83,52 +170,24 @@ sub commandStart
 #wypisz obserwowane pliki
 sub commandWatched
 {
-	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	my @watchList = readWatchlist();
+	foreach my $watchItem (@watchList)
 	{
-		printError("Nie można otworzyć $watchlistFileName.");
-		exit $errors{fileErr};
+		printInfo("$watchItem");
 	}
-	while(<WATCHLIST_FILEHANDLE>)
-	{
-		chomp($_);
-		printInfo("$_");
-	}
-	close(WATCHLIST_FILEHANDLE);
 }
 
 #dodaj nowy plik do obserwowanych
 sub commandWatch
 {
-	#wczytaj pliki z argumentów
-	my $argsCount = @ARGV;
-	my @filesToWatch;
-	for(my $i = 1; $i < $argsCount; $i++)
-	{
-		$filesToWatch[$i - 1] = $ARGV[$i];
-	}
-	my $filesCount = @filesToWatch;
-
-	#wczytaj już obserwowane z pliku
-	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
-	{
-		printError("Nie można otworzyć $watchlistFileName.");
-		exit $errors{fileErr};
-	}
-	my @watchedFiles;
-	my $f = 0;
-	while(<WATCHLIST_FILEHANDLE>)
-	{
-		chomp($_);
-		$watchedFiles[$f] = $_;
-		$f++;
-	}
-	my $watchedFilesCount = @watchedFiles;
-	close(WATCHLIST_FILEHANDLE);
+	my @filesToWatch = readArgs(1);
+	my @watchedFiles = readWatchlist();
 
 	#dodaj do obserwowanych patrząc na istnienie, bycie w katalogu i duplikaty
 	my $currDir = cwd();
 	my $k = 0; #ilość dodanych plików
-	for(my $i = 0; $i < $filesCount; $i++)
+	my $watchedFilesCount = scalar @watchedFiles;
+	for(my $i = 0; $i < scalar @filesToWatch; $i++)
 	{
 		my $fileIsGood = 1;
 		for(my $j = 0; $j < $watchedFilesCount; $j++)
@@ -161,56 +220,45 @@ sub commandWatch
 			}
 		}
 	}
-
-	#wypisz nową listę do pliku
-	if(!open(WATCHLIST_FILEHANDLE, ">", $watchlistFileName))
-	{
-		printError("Nie można zapisać do $watchlistFileName.");
-		exit $errors{fileErr};
-	}
-	foreach my $watchedFile (@watchedFiles)
-	{
-		print WATCHLIST_FILEHANDLE "$watchedFile\n";
-	}
-	close(WATCHLIST_FILEHANDLE);
+	saveToFile(\@watchedFiles, $watchlistFileName);
 }
 
 #usuń obserwowaną wartość z pliku
 sub commandUnwatch()
 {
-	#wczytaj pliki z argumentów
-	my $argsCount = @ARGV;
-	my @filesToUnwatch;
-	for(my $i = 1; $i < $argsCount; $i++)
-	{
-		$filesToUnwatch[$i - 1] = $ARGV[$i];
-	}
-	my $filesCount = @filesToUnwatch;
+	my @filesToUnwatch = readArgs(1);
+	my @watchedFiles = readWatchlist();
 
-	#wczytaj już obserwowane z pliku
-	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
+	#sprawdzenie, czy podane pliki są na liście
+	my $correct = 1;
+	foreach my $fileToUnwatch (@filesToUnwatch)
 	{
-		printError("Nie można otworzyć $watchlistFileName.");
-		exit $errors{fileErr};
+		my $isThere = 0;
+		foreach my $watchedFile (@watchedFiles)
+		{
+			if($fileToUnwatch eq $watchedFile)
+			{
+				$isThere = 1;
+			}
+		}
+		if($isThere eq 0)
+		{
+			printError("Plik $fileToUnwatch nie jest obserwowany!");
+			$correct = 0;
+		}
 	}
-	my @watchedFiles;
-	my $f = 0;
-	while(<WATCHLIST_FILEHANDLE>)
+	if($correct eq 0)
 	{
-		chomp($_);
-		$watchedFiles[$f] = $_;
-		$f++;
+		exit $errors{argError};
 	}
-	my $watchedFilesCount = @watchedFiles;
-	close(WATCHLIST_FILEHANDLE);
 
 	#przepisuj do nowego pomijając pliki do usunięcia
 	my @newList;
 	my $k = 0;
-	for(my $i = 0; $i < $watchedFilesCount; $i++)
+	for(my $i = 0; $i < scalar @watchedFiles; $i++)
 	{
 		my $toBeDeleted = 0;
-		for(my $j = 0; $j < $filesCount; $j++)
+		for(my $j = 0; $j < scalar @filesToUnwatch; $j++)
 		{
 			if($watchedFiles[$i] eq $filesToUnwatch[$j])
 			{
@@ -223,18 +271,7 @@ sub commandUnwatch()
 			$k++;
 		}
 	}
-
-	#wypisz nową listę do pliku
-	if(!open(WATCHLIST_FILEHANDLE, ">", $watchlistFileName))
-	{
-		printError("Nie można zapisać do $watchlistFileName.");
-		exit $errors{fileErr};
-	}
-	foreach my $file (@newList)
-	{
-		print WATCHLIST_FILEHANDLE "$file\n";
-	}
-	close(WATCHLIST_FILEHANDLE);
+	saveToFile(\@newList, $watchlistFileName);
 }
 
 #zrób zdjęcie (commit)
@@ -282,35 +319,13 @@ sub commandShot()
 	close(COMMIT_FILEHANDLE);
 
 	#wczytaj obserwowane pliki
-	if(!open(WATCHLIST_FILEHANDLE, "<", $watchlistFileName))
-	{
-		printError("Nie można otworzyć $watchlistFileName.");
-		exit $errors{fileErr};
-	}
-	my @watchedFiles;
-	my $f = 0;
-	while(<WATCHLIST_FILEHANDLE>)
-	{
-		chomp($_);
-		$watchedFiles[$f] = $_;
-		$f++;
-	}
-	my $watchedFilesCount = @watchedFiles;
-	close(WATCHLIST_FILEHANDLE);
+	my @watchedFiles = readWatchlist();
 
 	#kopiuj pliki
-	foreach my $x (@watchedFiles)
+	if(!copyFiles("", $dirName, \@watchedFiles))
 	{
-		my $newDirName = $dirName . $x;
-		#perl nie obsługuje natywnie rekursywnego kopiowania katalogów. Tak jest szybciej,
-		system("cp -r $x $newDirName");
-		if($? ne 0)
-		{
-			printError("Nie można skopiować $x do $newDirName!");
-			#usuwamy katalog, ponieważ i tak jest niepełny
-			rmtree($dirName);
-			exit $errors{copyErr};
-		}
+		rmtree($dirName);
+		exit $errors{copyErr};
 	}
 
 	#zapisz nowy id
@@ -327,16 +342,7 @@ sub commandShot()
 #wypisuje zdjęcia
 sub commandHistory()
 {
-	if(!opendir(SHOTS_DIR, $shotsDirName))
-	{
-		printError("Nie można wypisać zawartości $shotsDirName.");
-		exit $errors{fileErr};
-	}
-	#wkładamy nazwy do tablicy, ale bez .. i .
-	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
-	@subdirs = sort @subdirs;
-	closedir(SHOTS_DIR);
-
+	my @subdirs = readShots();
 	foreach my $subdir (@subdirs)
 	{
 		printInfo("$subdir");
@@ -354,27 +360,12 @@ sub commandHistory()
 			close(INFO_FILEHANDLE);
 		}
 	}
-
 }
 
 sub commandBurn
 {
-	#wczytaj pliki z argumentów
-	my $argsCount = @ARGV;
-	my @filesToBurn;
-	for(my $i = 1; $i < $argsCount; $i++)
-	{
-		$filesToBurn[$i - 1] = $ARGV[$i];
-	}
-
-	#wczytaj listę commitów
-	if(!opendir(SHOTS_DIR, $shotsDirName))
-	{
-		printError("Nie można wypisać zawartości $shotsDirName.");
-		exit $errors{fileErr};
-	}
-	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
-	closedir(SHOTS_DIR);
+	my @filesToBurn = readArgs(1);
+	my @subdirs = readShots();
 
 	#sprawdź poprawność
 	my $corr = 1;
@@ -403,19 +394,12 @@ sub commandBurn
 			}
 		}
 	}
-
 }
 
 sub commandSummon
 {
-	#wczytaj pliki z argumentów
-	my $argsCount = @ARGV;
-	my @filesToSummon;
-	for(my $i = 2; $i < $argsCount; $i++)
-	{
-		$filesToSummon[$i - 2] = $ARGV[$i];
-	}
 	my $shotToSummon = $ARGV[1];
+	my @filesToSummon = readArgs(2);
 
 	#sprawdź, czy katalog istnieje
 	if(!-d $shotsDirName . $shotToSummon)
@@ -470,17 +454,11 @@ sub commandTeleport()
 	my @files = grep{$_ ne "." and $_ ne ".."} readdir(SHOT_DIR);
 	closedir(SHOT_DIR);
 
-	foreach my $file (@files)
+	if(!copyFiles($shotDir, "", \@files))
 	{
-		my $source = $shotDir . $file;
-		system("cp -rT $source $file");
-		if($? ne 0)
-		{
-			printError("Nie można teleportować $file!");
-			exit $errors{copyErr};
-		}
+		printError("Nie można teleportować $shot!");
+		exit $errors{copyErr};
 	}
-
 }
 
 sub commandInfo
@@ -529,16 +507,7 @@ sub commandInfo
 sub commandVersions()
 {
 	my $file = $ARGV[1];
-
-	#znajdź listę commitów
-	if(!opendir(SHOTS_DIR, $shotsDirName))
-	{
-		printError("Nie można wypisać zawartości $shotsDirName.");
-		exit $errors{fileErr};
-	}
-	my @subdirs = grep{!/^\./} readdir(SHOTS_DIR);
-	@subdirs = sort @subdirs;
-	closedir(SHOTS_DIR);
+	my @subdirs = readShots();
 
 	foreach my $subdir (@subdirs)
 	{
