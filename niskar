@@ -118,7 +118,9 @@ sub copyFiles
 		my $newFileName = $source . $x;
 		my $newDestName = $dest . $x;
 		#perl nie obsługuje natywnie rekursywnego kopiowania katalogów. Tak jest szybciej,
-		system("cp -rT $newFileName $newDestName");
+		#usuwamy docelowy plik, aby nie zachował starych plików w katalogu
+		rmtree($newDestName);
+		system("/bin/cp -rT $newFileName $newDestName");
 		if($? ne 0)
 		{
 			printError("Nie można skopiować $x do $dest!");
@@ -362,6 +364,7 @@ sub commandHistory()
 	}
 }
 
+#usuwa zdjęcie
 sub commandBurn
 {
 	my @filesToBurn = readArgs(1);
@@ -396,6 +399,7 @@ sub commandBurn
 	}
 }
 
+#przywołyje pliki
 sub commandSummon
 {
 	my $shotToSummon = $ARGV[1];
@@ -424,7 +428,8 @@ sub commandSummon
 	{
 		my $fileToCopy = $shotDir . $fileToSummon;
 		#opcja T traktuje docelowy katalog jak plik i nie tworzy drugiego o tej samej nazwie wewnątrz
-		system("cp -rT $fileToCopy $fileToSummon");
+		rmtree($fileToSummon);
+		system("/bin/cp -rT $fileToCopy $fileToSummon");
 		if($? ne 0)
 		{
 			printError("Nie można przywołać $fileToSummon!");
@@ -433,6 +438,7 @@ sub commandSummon
 	}
 }
 
+#przywołaj wszytkie pliki ze zdjęcia
 sub commandTeleport()
 {
 	my $shot = $ARGV[1];
