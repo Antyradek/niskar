@@ -33,7 +33,7 @@ sub printHelp
 	printInfo("watched\n\tWypisuje obserwowane pliki.");
 	printInfo("watch <pliki/katalogi>\n\tDodaje podane obiekty do obserwowanych.");
 	printInfo("unwatch <pliki/katalogi>\n\tUsuwa podane obiekty z obserwowanych.");
-	printInfo("shot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
+	printInfo("shoot <komentarz>\n\tTworzy zdjęcie kopiując obserwowane pliki.");
 	printInfo("history\n\tWypisuje listę zdjęć z komentarzami i datami.");
 	printInfo("burn <zdjęcia>\n\tUsuwa zdjęcia z repozytorium.");
 	printInfo("summon <zdjęcie> <pliki/katalogi>\n\tZastępuje obecne pliki podanymi plikami ze zdjęcia.");
@@ -277,7 +277,7 @@ sub commandUnwatch()
 }
 
 #zrób zdjęcie (commit)
-sub commandShot()
+sub commandShoot()
 {
 	#otwórz plik z ostatnim id
 	if(!open(LASTID_FILEHANDLE, "<", $lastIdFileName))
@@ -559,9 +559,9 @@ elsif($command eq "unwatch" and $argsCount gt 1)
 {
 	commandUnwatch();
 }
-elsif($command eq "shot" and $argsCount gt 1)
+elsif($command eq "shoot" and $argsCount gt 1)
 {
-	commandShot();
+	commandShoot();
 }
 elsif($command eq "history" and $argsCount eq 1)
 {

@@ -27,7 +27,7 @@ $ niskar watched
 $ niskar unwatch <pliki/katalogi>
 	Przestań obserwować obiekty.
 	
-$ niskar shot <tekst do commita>
+$ niskar shoot <tekst do commita>
 	Zrób zdjęcie (commit) obserwowanych plików.
 	
 $ niskar history
